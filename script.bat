@@ -11,7 +11,7 @@ echo 🔧 Compilation du fichier Java...
 javac -cp "C:\xampp\tomcat\lib\servlet-api.jar" -d . *.java
 
 echo 📦 Création du JAR : %JAR_NAME%
-jar cf %JAR_NAME% *.class
+jar cf %JAR_NAME% servlet
 
 echo ✅ JAR généré : %JAR_NAME%
 endlocal

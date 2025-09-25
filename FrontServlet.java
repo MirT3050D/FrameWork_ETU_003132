@@ -11,7 +11,7 @@ public class FrontServlet extends HttpServlet {
 
         response.setContentType("text/html;charset=UTF-8");
 
-        String path = request.getRequestURI();; // ex: /home
+        String path = request.getRequestURI(); // ex: /home
 
         // Simple routing logic
             response.getWriter().println("<html><body><h1>URL actuel : "+path+"</h1></body></html>");

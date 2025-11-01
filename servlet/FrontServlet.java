@@ -64,4 +64,20 @@ public class FrontServlet extends HttpServlet {
 
     }
 
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        javax.servlet.ServletContext ctx = getServletContext();
+        ctx.log("FrontServlet initialisé");
+        // Marquer l'application comme initialisée
+        ctx.setAttribute("frameworkInitialized", Boolean.TRUE);
+
+        // Lire un paramètre d'initialisation optionnel 'frameworkName' si fourni
+        String frameworkName = getServletConfig().getInitParameter("frameworkName");
+        if (frameworkName != null && !frameworkName.isEmpty()) {
+            ctx.setAttribute("frameworkName", frameworkName);
+            ctx.log("Framework name set to: " + frameworkName);
+        }
+    }
+
 }

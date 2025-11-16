@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.rmi.ServerException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import modelview.ModelView;
 import annotation.MethodeAnnotation;
 import java.util.Set;
 import scan.ClassPathScanner;
@@ -129,8 +130,15 @@ public class FrontServlet extends HttpServlet {
                         // Vous pouvez étendre ici pour passer req/resp si souhaité
                     }
 
-                    // Afficher le résultat si c'est une String
-                    if (result instanceof String) {
+                    // Si la méthode retourne un ModelView, dispatcher vers la vue
+                    if (result instanceof ModelView) {
+                        String view = ((ModelView) result).getView();
+                        if (view != null && !view.isEmpty()) {
+                            RequestDispatcher rd = req.getRequestDispatcher(view);
+                            rd.forward(req, resp);
+                            return;
+                        }
+                    } else if (result instanceof String) {
                         out.println("<h2>Résultat</h2>");
                         out.println("<p>" + (String) result + "</p>");
                     } else {

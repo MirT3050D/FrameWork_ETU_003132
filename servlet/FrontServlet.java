@@ -193,7 +193,7 @@ public class FrontServlet extends HttpServlet {
                                 paramName = parameter.getName();
                             }
                             
-                            // Chercher la valeur : d'abord dans urlParams (paramètres d'URL avec {}), puis dans request params (formulaire/query string)
+                            // Chercher la valeur : d'abord dans urlParams, puis dans request params
                             String value = null;
                             if (urlParams != null && urlParams.containsKey(paramName)) {
                                 // Paramètre extrait de l'URL (ex: /etudiant/{id} -> id=5)

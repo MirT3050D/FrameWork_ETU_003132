@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import modelview.ModelView;
 import annotation.MethodeAnnotation;
+import annotation.RequestParam;
 import java.util.Set;
 import scan.ClassPathScanner;
 import scan.UrlMatcher;
@@ -171,7 +172,7 @@ public class FrontServlet extends HttpServlet {
                         
                         for (int i = 0; i < paramTypes.length; i++) {
                             Class<?> paramType = paramTypes[i];
-                            String paramName = parameters[i].getName();
+                            java.lang.reflect.Parameter parameter = parameters[i];
                             
                             // Ignorer Map, List, tableaux - traités séparément
                             if (Map.class.isAssignableFrom(paramType) || 
@@ -181,6 +182,15 @@ public class FrontServlet extends HttpServlet {
                                     args[i] = urlParams; // Passer les paramètres d'URL
                                 }
                                 continue;
+                            }
+                            
+                            // Déterminer le nom du paramètre : @RequestParam.value() ou nom du paramètre
+                            String paramName;
+                            if (parameter.isAnnotationPresent(RequestParam.class)) {
+                                RequestParam reqParam = parameter.getAnnotation(RequestParam.class);
+                                paramName = reqParam.value();
+                            } else {
+                                paramName = parameter.getName();
                             }
                             
                             // Chercher la valeur : d'abord dans urlParams, puis dans request params

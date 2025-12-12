@@ -168,12 +168,15 @@ public class FrontServlet extends HttpServlet {
                             Class<?> paramType = paramTypes[i];
                             java.lang.reflect.Parameter parameter = parameters[i];
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                             if (Map.class.isAssignableFrom(paramType) || 
                                 List.class.isAssignableFrom(paramType) || 
                                 paramType.isArray()) {
                                 if (Map.class.isAssignableFrom(paramType)) {
                                     args[i] = urlParams;
 =======
+=======
+>>>>>>> Stashed changes
                             // Map<String, Object> (formulaire complet)
                             if (Map.class.isAssignableFrom(paramType)) {
                                 Map<String, Object> paramMap = new HashMap<>();
@@ -216,6 +219,35 @@ public class FrontServlet extends HttpServlet {
                                 }
                                 continue;
                             }
+<<<<<<< Updated upstream
+=======
+                            // Type simple (String, int, ...)
+                            if (isSimpleType(paramType)) {
+                                String paramName;
+                                if (parameter.isAnnotationPresent(RequestParam.class)) {
+                                    RequestParam reqParam = parameter.getAnnotation(RequestParam.class);
+                                    paramName = reqParam.value();
+                                } else {
+                                    paramName = parameter.getName();
+                                }
+                                String value = null;
+                                if (urlParams != null && urlParams.containsKey(paramName)) {
+                                    value = urlParams.get(paramName);
+                                }
+                                if (value == null || value.isEmpty()) {
+                                    value = req.getParameter(paramName);
+                                }
+                                if (value == null || value.isEmpty()) {
+                                    throw new IllegalArgumentException("Paramètre obligatoire manquant: " + paramName);
+                                }
+                                try {
+                                    args[i] = convertParameter(value, paramType);
+                                } catch (Exception e) {
+                                    throw new IllegalArgumentException("Impossible de convertir le paramètre '" + paramName + "' (valeur: '" + value + "') en type " + paramType.getSimpleName(), e);
+                                }
+                                continue;
+                            }
+>>>>>>> Stashed changes
                             // Objet complexe : construction automatique
                             try {
                                 args[i] = buildObjectFromRequest(paramType, parameter, req, "");

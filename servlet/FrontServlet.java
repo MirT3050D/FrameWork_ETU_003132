@@ -183,9 +183,10 @@ public class FrontServlet extends HttpServlet {
                         for (int i = 0; i < paramTypes.length; i++) {
                             Class<?> paramType = paramTypes[i];
                             java.lang.reflect.Parameter parameter = parameters[i];
-                            // Map<String, Object> (formulaire complet)
+                            // Si Map<String, Object> attendu, construire à partir des paramètres du formulaire
                             if (Map.class.isAssignableFrom(paramType)) {
                                 Map<String, Object> paramMap = new HashMap<>();
+                                // Ajoute tous les paramètres du formulaire (name/value)
                                 Map<String, String[]> paramValues = req.getParameterMap();
                                 for (Map.Entry<String, String[]> entry : paramValues.entrySet()) {
                                     String key = entry.getKey();
@@ -197,6 +198,9 @@ public class FrontServlet extends HttpServlet {
                                     }
                                 }
                                 args[i] = paramMap;
+                                continue;
+                            }
+                            if (List.class.isAssignableFrom(paramType) || paramType.isArray()) {
                                 continue;
                             }
                             if (List.class.isAssignableFrom(paramType) || paramType.isArray()) {

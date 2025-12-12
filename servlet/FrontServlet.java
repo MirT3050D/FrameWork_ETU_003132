@@ -85,7 +85,8 @@ public class FrontServlet extends HttpServlet {
         String path = (checkParam != null && !checkParam.isEmpty()) ? checkParam : req.getRequestURI().substring(req.getContextPath().length());
 
         Object o = getServletContext().getAttribute(ATTR_ANNOTATED_CLASSES);
-        List<RouteInfo> matchingRoutes = new ArrayList<>();
+        List<RouteInfo> exactRoutes = new ArrayList<>();
+        List<RouteInfo> dynamicRoutes = new ArrayList<>();
         Map<String, String> urlParams = null;
 
         if (o instanceof Set) {
@@ -97,30 +98,45 @@ public class FrontServlet extends HttpServlet {
                         if (m.isAnnotationPresent(annotation.MethodeAnnotation.class)) {
                             annotation.MethodeAnnotation ma = m.getAnnotation(annotation.MethodeAnnotation.class);
                             String url = ma.value();
-                            // Par défaut, route ALL
                             List<RouteInfo> routesForMethod = new ArrayList<>();
                             routesForMethod.add(new RouteInfo(cls, m, url, "ALL"));
-                            // Si GetMapping, ajoute GET
                             if (m.isAnnotationPresent(annotation.GetMapping.class)) {
                                 routesForMethod.add(new RouteInfo(cls, m, url, "GET"));
                             }
-                            // Si PostMapping, ajoute POST
                             if (m.isAnnotationPresent(annotation.PostMapping.class)) {
                                 routesForMethod.add(new RouteInfo(cls, m, url, "POST"));
                             }
-                            // Ajoute toutes les routes pour cette méthode
                             for (RouteInfo route : routesForMethod) {
-                                UrlMatcher matcher = new UrlMatcher(route.urlPattern);
-                                Map<String, String> params = matcher.extractParams(path);
-                                if (params != null) {
-                                    matchingRoutes.add(new RouteInfo(route.cls, route.method, route.urlPattern, route.httpMethod));
-                                    urlParams = params;
+                                if (!route.urlPattern.contains("{")) {
+                                    exactRoutes.add(route);
+                                } else {
+                                    dynamicRoutes.add(route);
                                 }
                             }
                         }
                     }
                 } catch (Throwable t) {
                     // ignore problematic classes/methods
+                }
+            }
+        }
+
+        // D'abord, chercher une route exacte
+        List<RouteInfo> matchingRoutes = new ArrayList<>();
+        for (RouteInfo route : exactRoutes) {
+            if (route.urlPattern.equals(path)) {
+                matchingRoutes.add(route);
+                urlParams = new HashMap<>();
+            }
+        }
+        // Si aucune route exacte, chercher une route dynamique
+        if (matchingRoutes.isEmpty()) {
+            for (RouteInfo route : dynamicRoutes) {
+                UrlMatcher matcher = new UrlMatcher(route.urlPattern);
+                Map<String, String> params = matcher.extractParams(path);
+                if (params != null) {
+                    matchingRoutes.add(route);
+                    urlParams = params;
                 }
             }
         }
@@ -167,19 +183,6 @@ public class FrontServlet extends HttpServlet {
                         for (int i = 0; i < paramTypes.length; i++) {
                             Class<?> paramType = paramTypes[i];
                             java.lang.reflect.Parameter parameter = parameters[i];
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                            if (Map.class.isAssignableFrom(paramType) || 
-                                List.class.isAssignableFrom(paramType) || 
-                                paramType.isArray()) {
-                                if (Map.class.isAssignableFrom(paramType)) {
-                                    args[i] = urlParams;
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
                             // Map<String, Object> (formulaire complet)
                             if (Map.class.isAssignableFrom(paramType)) {
                                 Map<String, Object> paramMap = new HashMap<>();
@@ -192,8 +195,11 @@ public class FrontServlet extends HttpServlet {
                                     } else {
                                         paramMap.put(key, vals);
                                     }
->>>>>>> Stashed changes
                                 }
+                                args[i] = paramMap;
+                                continue;
+                            }
+                            if (List.class.isAssignableFrom(paramType) || paramType.isArray()) {
                                 continue;
                             }
                             // Type simple (String, int, ...)
@@ -222,41 +228,6 @@ public class FrontServlet extends HttpServlet {
                                 }
                                 continue;
                             }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
-                            // Type simple (String, int, ...)
-                            if (isSimpleType(paramType)) {
-                                String paramName;
-                                if (parameter.isAnnotationPresent(RequestParam.class)) {
-                                    RequestParam reqParam = parameter.getAnnotation(RequestParam.class);
-                                    paramName = reqParam.value();
-                                } else {
-                                    paramName = parameter.getName();
-                                }
-                                String value = null;
-                                if (urlParams != null && urlParams.containsKey(paramName)) {
-                                    value = urlParams.get(paramName);
-                                }
-                                if (value == null || value.isEmpty()) {
-                                    value = req.getParameter(paramName);
-                                }
-                                if (value == null || value.isEmpty()) {
-                                    throw new IllegalArgumentException("Paramètre obligatoire manquant: " + paramName);
-                                }
-                                try {
-                                    args[i] = convertParameter(value, paramType);
-                                } catch (Exception e) {
-                                    throw new IllegalArgumentException("Impossible de convertir le paramètre '" + paramName + "' (valeur: '" + value + "') en type " + paramType.getSimpleName(), e);
-                                }
-                                continue;
-                            }
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
                             // Objet complexe : construction automatique
                             try {
                                 args[i] = buildObjectFromRequest(paramType, parameter, req, "");

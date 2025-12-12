@@ -169,12 +169,15 @@ public class FrontServlet extends HttpServlet {
                             java.lang.reflect.Parameter parameter = parameters[i];
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                             if (Map.class.isAssignableFrom(paramType) || 
                                 List.class.isAssignableFrom(paramType) || 
                                 paramType.isArray()) {
                                 if (Map.class.isAssignableFrom(paramType)) {
                                     args[i] = urlParams;
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
                             // Map<String, Object> (formulaire complet)
@@ -220,7 +223,10 @@ public class FrontServlet extends HttpServlet {
                                 continue;
                             }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
                             // Type simple (String, int, ...)
                             if (isSimpleType(paramType)) {
                                 String paramName;
@@ -247,6 +253,9 @@ public class FrontServlet extends HttpServlet {
                                 }
                                 continue;
                             }
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                             // Objet complexe : construction automatique
                             try {

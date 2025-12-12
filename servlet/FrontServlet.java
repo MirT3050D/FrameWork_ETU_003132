@@ -94,37 +94,28 @@ public class FrontServlet extends HttpServlet {
             for (Class<?> cls : annotated) {
                 try {
                     for (Method m : cls.getDeclaredMethods()) {
-                        // Collecte toutes les annotations
-                        List<String> urlList = new ArrayList<>();
-                        List<RouteInfo> routesForMethod = new ArrayList<>();
                         if (m.isAnnotationPresent(annotation.MethodeAnnotation.class)) {
                             annotation.MethodeAnnotation ma = m.getAnnotation(annotation.MethodeAnnotation.class);
-                            urlList.add(ma.value());
-                            for (String url : urlList) {
-                                routesForMethod.add(new RouteInfo(cls, m, url, "ALL"));
-                            }
-                        }
-                        if (m.isAnnotationPresent(annotation.GetMapping.class)) {
-                            annotation.GetMapping gm = m.getAnnotation(annotation.GetMapping.class);
-                            urlList.add(gm.value());
-                            for (String url : urlList) {
+                            String url = ma.value();
+                            // Par défaut, route ALL
+                            List<RouteInfo> routesForMethod = new ArrayList<>();
+                            routesForMethod.add(new RouteInfo(cls, m, url, "ALL"));
+                            // Si GetMapping, ajoute GET
+                            if (m.isAnnotationPresent(annotation.GetMapping.class)) {
                                 routesForMethod.add(new RouteInfo(cls, m, url, "GET"));
                             }
-                        }
-                        if (m.isAnnotationPresent(annotation.PostMapping.class)) {
-                            annotation.PostMapping pm = m.getAnnotation(annotation.PostMapping.class);
-                            urlList.add(pm.value());
-                            for (String url : urlList) {
+                            // Si PostMapping, ajoute POST
+                            if (m.isAnnotationPresent(annotation.PostMapping.class)) {
                                 routesForMethod.add(new RouteInfo(cls, m, url, "POST"));
                             }
-                        }
-                        // Ajoute toutes les routes pour cette méthode
-                        for (RouteInfo route : routesForMethod) {
-                            UrlMatcher matcher = new UrlMatcher(route.urlPattern);
-                            Map<String, String> params = matcher.extractParams(path);
-                            if (params != null) {
-                                matchingRoutes.add(new RouteInfo(route.cls, route.method, route.urlPattern, route.httpMethod));
-                                urlParams = params;
+                            // Ajoute toutes les routes pour cette méthode
+                            for (RouteInfo route : routesForMethod) {
+                                UrlMatcher matcher = new UrlMatcher(route.urlPattern);
+                                Map<String, String> params = matcher.extractParams(path);
+                                if (params != null) {
+                                    matchingRoutes.add(new RouteInfo(route.cls, route.method, route.urlPattern, route.httpMethod));
+                                    urlParams = params;
+                                }
                             }
                         }
                     }
@@ -137,16 +128,16 @@ public class FrontServlet extends HttpServlet {
         // Sélectionne la bonne méthode selon le type de requête
         RouteInfo selectedRoute = null;
         String reqMethod = req.getMethod();
-        // Priorité : ALL > GET/POST
+        // Priorité : GET/POST > ALL
         for (RouteInfo route : matchingRoutes) {
-            if ("ALL".equals(route.httpMethod)) {
+            if (route.httpMethod.equalsIgnoreCase(reqMethod)) {
                 selectedRoute = route;
                 break;
             }
         }
         if (selectedRoute == null) {
             for (RouteInfo route : matchingRoutes) {
-                if (route.httpMethod.equalsIgnoreCase(reqMethod)) {
+                if ("ALL".equals(route.httpMethod)) {
                     selectedRoute = route;
                     break;
                 }

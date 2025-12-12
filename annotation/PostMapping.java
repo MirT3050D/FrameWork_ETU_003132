@@ -7,5 +7,5 @@ import java.lang.annotation.ElementType;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface PostMapping {
-    String value(); // ex: "/save"
+    // Marqueur uniquement, pas de valeur
 }

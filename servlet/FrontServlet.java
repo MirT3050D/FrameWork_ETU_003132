@@ -22,11 +22,11 @@ import modelview.ModelView;
 import annotation.MethodeAnnotation;
 import annotation.RequestParam;
 import annotation.Api;
+import annotation.Session;
 import util.JsonUtil;
 import java.util.Set;
 import scan.ClassPathScanner;
-import scan.UrlMatcher;
-import upload.FileUpload;
+import servlet.UrlMatcher;
  
 
  
@@ -175,7 +175,7 @@ public class FrontServlet extends HttpServlet {
         try (PrintWriter out = resp.getWriter()) {
             if (selectedRoute != null) {
                 // If request is multipart, read uploaded parts into map for binding
-                Map<String, java.util.List<FileUpload>> uploadedFiles = new HashMap<>();
+                Map<String, java.util.List<main.FileUpload>> uploadedFiles = new HashMap<>();
                 boolean isMultipart = req.getContentType() != null && req.getContentType().toLowerCase().startsWith("multipart/");
                 if (isMultipart) {
                     try {
@@ -216,7 +216,7 @@ public class FrontServlet extends HttpServlet {
                             try (InputStream is = p.getInputStream()) {
                                 content = is.readAllBytes();
                             }
-                            FileUpload fu = new FileUpload(content, submitted, p.getContentType(), size);
+                            main.FileUpload fu = new main.FileUpload(content, submitted, p.getContentType(), size);
                             // save to uploads/ if possible (overwrite existing)
                             try {
                                 if (uploadsPath != null) {
@@ -249,6 +249,8 @@ public class FrontServlet extends HttpServlet {
                     Object target = null;
                     if (!Modifier.isStatic(foundMethodRef.getModifiers())) {
                         target = foundClassRef.getDeclaredConstructor().newInstance();
+                        // Synchronisation AVANT: injection des variables de session dans les Map annotées @Session
+                        syncSessionToMaps(target, req.getSession());
                     }
 
                     Object result = null;
@@ -287,16 +289,16 @@ public class FrontServlet extends HttpServlet {
                                 // Try to bind file lists/arrays if multipart
                                 if (isMultipart) {
                                     // Array of FileUpload
-                                    if (paramType.isArray() && paramType.getComponentType() == FileUpload.class) {
-                                        java.util.List<FileUpload> lst = uploadedFiles.get(paramNameForFile);
+                                    if (paramType.isArray() && paramType.getComponentType() == main.FileUpload.class) {
+                                        java.util.List<main.FileUpload> lst = uploadedFiles.get(paramNameForFile);
                                         if (lst == null) lst = new ArrayList<>();
-                                        FileUpload[] arr = lst.toArray(new FileUpload[0]);
+                                        main.FileUpload[] arr = lst.toArray(new main.FileUpload[0]);
                                         args[i] = arr;
                                         continue;
                                     }
                                     // List<FileUpload>
                                     if (List.class.isAssignableFrom(paramType)) {
-                                        java.util.List<FileUpload> lst = uploadedFiles.get(paramNameForFile);
+                                        java.util.List<main.FileUpload> lst = uploadedFiles.get(paramNameForFile);
                                         if (lst == null) lst = new ArrayList<>();
                                         args[i] = lst;
                                         continue;
@@ -332,12 +334,12 @@ public class FrontServlet extends HttpServlet {
                                 continue;
                             }
                                 // File binding: byte[] or FileUpload
-                                if (isMultipart && (paramType == byte[].class || paramType == FileUpload.class)) {
-                                    java.util.List<FileUpload> lst = uploadedFiles.get(paramNameForFile);
+                                if (isMultipart && (paramType == byte[].class || paramType == main.FileUpload.class)) {
+                                    java.util.List<main.FileUpload> lst = uploadedFiles.get(paramNameForFile);
                                     if (lst == null || lst.isEmpty()) {
                                         throw new IllegalArgumentException("Fichier manquant: " + paramNameForFile);
                                     }
-                                    FileUpload first = lst.get(0);
+                                    main.FileUpload first = lst.get(0);
                                     if (paramType == byte[].class) {
                                         args[i] = first.getContent();
                                     } else {
@@ -355,6 +357,10 @@ public class FrontServlet extends HttpServlet {
                         result = foundMethodRef.invoke(target, args);
                     }
 
+                    // Synchronisation APRES: recopier les Map annotées @Session dans la HttpSession
+                    if (target != null) {
+                        syncMapsToSession(target, req.getSession());
+                    }
                     if (apiEnabled) {
                         Map<String, Object> envelope = new HashMap<>();
                         envelope.put("status", "success");
@@ -561,4 +567,62 @@ public class FrontServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Synchronise toutes les Map<String, Object> annotées @Session avec la HttpSession (copie de la session vers le Map)
+     */
+    private void syncSessionToMaps(Object controller, HttpSession session) {
+        if (controller == null || session == null) return;
+        Class<?> clazz = controller.getClass();
+        java.lang.reflect.Field[] fields = clazz.getDeclaredFields();
+        for (java.lang.reflect.Field field : fields) {
+            if (field.isAnnotationPresent(Session.class)
+                && Map.class.isAssignableFrom(field.getType())) {
+                field.setAccessible(true);
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> map = (Map<String, Object>) field.get(controller);
+                    if (map == null) {
+                        map = new HashMap<>();
+                        field.set(controller, map);
+                    }
+                    // Copier toutes les variables de session dans le Map
+                    map.clear();
+                    java.util.Enumeration<String> names = session.getAttributeNames();
+                    while (names.hasMoreElements()) {
+                        String key = names.nextElement();
+                        map.put(key, session.getAttribute(key));
+                    }
+                } catch (Exception e) {
+                    // log ou ignorer
+                }
+            }
+        }
+    }
+
+    /**
+     * Synchronise toutes les Map<String, Object> annotées @Session avec la HttpSession (copie du Map vers la session)
+     */
+    private void syncMapsToSession(Object controller, HttpSession session) {
+        if (controller == null || session == null) return;
+        Class<?> clazz = controller.getClass();
+        java.lang.reflect.Field[] fields = clazz.getDeclaredFields();
+        for (java.lang.reflect.Field field : fields) {
+            if (field.isAnnotationPresent(Session.class)
+                && Map.class.isAssignableFrom(field.getType())) {
+                field.setAccessible(true);
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> map = (Map<String, Object>) field.get(controller);
+                    if (map != null) {
+                        // Mettre à jour la session avec toutes les entrées du Map
+                        for (Map.Entry<String, Object> entry : map.entrySet()) {
+                            session.setAttribute(entry.getKey(), entry.getValue());
+                        }
+                    }
+                } catch (Exception e) {
+                    // log ou ignorer
+                }
+            }
+        }
+    }
 }
